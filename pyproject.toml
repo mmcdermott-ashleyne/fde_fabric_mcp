@@ -1,0 +1,20 @@
+[project]
+name = "fde-fabric-mcp"
+version = "0.1.0"
+description = "FDE - Vision AI Fabric MCP server"
+requires-python = ">=3.10"
+dependencies = [
+  "mcp[cli]",
+  "azure-identity",
+  "requests",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[tool.mcp]
+# Optional metadata for some tooling
+name = "fde-fabric-mcp"
+
+[tool.mcp.entrypoints]
+default = "fde_fabric_mcp.server:run"
