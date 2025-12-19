@@ -8,7 +8,7 @@ It handles:
 - Discovering Fabric workspaces and items
 - Resolving Lakehouse / Warehouse SQL endpoints
 - Running SQL queries against Fabric Warehouse/Lakehouse
-- Project-driven pipeline submission via `run_project_pipeline`
+- **Project-driven pipeline submission via a custom “Project Orchestrator” pattern** (`run_project_pipeline`, `run_all_jobs_for_day`)
 
 ---
 
@@ -19,7 +19,9 @@ It handles:
 - Lakehouse discovery plus SQL endpoint resolution
 - Warehouse selection combined with SQL execution helpers
 - Per-client in-memory context store for workspaces, lakehouses, warehouses, and projects
-- Project-driven Fabric pipeline submission (`run_project_pipeline`)
+- **Custom orchestrator-based pipeline submission**:
+  - `run_project_pipeline` (runs a single project’s routed processor pipeline)
+  - `run_all_jobs_for_day` (runs the *Project Orchestrator* once per distinct interval for a day)
 
 ---
 
@@ -38,7 +40,7 @@ fde_fabric_mcp/
 ├── tools/
 │   ├── identity.py        # Azure CLI-based identity helpers (`whoami`)
 │   ├── lakehouse.py       # List/set/get current Lakehouse
-│   ├── pipelines.py       # Pipeline rerun implementations (sync, no MCP glue)
+│   ├── pipelines.py       # Pipeline runner + orchestrator helpers
 │   ├── warehouse.py       # Set/get Warehouse & run SQL queries
 │   └── workspace.py       # List/set/get current workspace
 ├── auth.py                # Azure credential + bearer token helpers
@@ -267,23 +269,40 @@ Adjust the scope and base URL to whatever you actually use in your environment.
 
 ---
 
-### (Optional) Pipeline Rerun Tools
+## Pipeline Tools (Custom Project Orchestrator)
 
-In `server.py` these are currently commented out but fully implemented in `tools/pipelines.py`:
+The pipeline helpers in this repo are **not generic “run any Fabric pipeline” helpers**. They implement a **custom Project Orchestrator pattern** used by FDE:
 
-* `rerun_pipeline_by_alias(...)`
-* `rerun_pipeline_last_days(...)`
+* Each project stores a `cron_expression` (evaluated in `America/New_York` unless `TZ=`/`CRON_TZ=` is included).
+* Projects are grouped into distinct UTC `run_interval_utc` values per day.
+* A **single orchestrator pipeline** is invoked once per interval to dispatch the appropriate project workload(s).
 
-To enable:
+### Required env_config keys
 
-1. Implement/plug in your real `FabricPipelineRunner` in `core/pipeline_runner.py`.
-2. Uncomment the imports and tool definitions in `server.py`.
-3. Ensure all pipeline-related env vars are set (see **Configuration**).
+The orchestrator pipeline ID is pulled from your shared environment config row:
 
-These helpers are designed for re-running Fabric pipelines over:
+* `env_config["project_orchestrator_id"]` (pipelineId)
+* `env_config["workspace_id"]` (workspaceId)
 
-* an explicit `start_date` → `end_date` range, or
-* the last `N` days.
+These are passed into the orchestrator invoke payload along with:
+
+* `interval` (UTC minute string)
+* `is_current` (flag for orchestrator logic)
+* `env` (the full env_config block)
+
+### Tools
+
+* **`run_project_pipeline(...)`**
+  Submits a pipeline run for the currently selected project.
+  If `time_utc="cron"` (default), the interval time is derived from the project’s `cron_expression` in ET and converted to UTC.
+
+* **`run_all_jobs_for_day(run_date, ...)`**
+  Computes distinct `run_interval_utc` values for `run_date`, then invokes the **Project Orchestrator** once per interval.
+
+> Note: Because these tools depend on your **custom orchestrator pipeline contract**, they assume:
+>
+> * a `dbo.project` table with `cron_expression`
+> * an environment config row that contains `project_orchestrator_id`
 
 ---
 
@@ -313,7 +332,3 @@ These helpers are designed for re-running Fabric pipelines over:
 * `core/projects.py` is intentionally empty for now — a stub for future project-related helpers.
 
 ---
-
-## License
-
-Add your license information here (e.g. MIT, proprietary, etc.).
