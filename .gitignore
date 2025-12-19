@@ -1,1 +1,87 @@
-.venv
+# ------------------------------------
+# Python bytecode / caches
+# ------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.pytype/
+.ruff_cache/
+.pyre/
+.pyright/
+.coverage
+coverage.xml
+htmlcov/
+*.cover
+*.log
+
+# ------------------------------------
+# Virtual environments
+# ------------------------------------
+.venv/
+venv/
+ENV/
+env/
+.conda/
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
+dist/
+build/
+wheels/
+sdist/
+develop-eggs/
+
+# ------------------------------------
+# Jupyter / IPython
+# ------------------------------------
+.ipynb_checkpoints/
+.ipython/
+
+# ------------------------------------
+# OS / Editor
+# ------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.vscode/
+.idea/
+*.iml
+
+# ------------------------------------
+# Local config / secrets
+# ------------------------------------
+.env
+.env.*
+*.pem
+*.pfx
+*.key
+*.crt
+secrets.*
+local.settings.json
+
+# ------------------------------------
+# MCP / Fabric local artifacts (if any)
+# ------------------------------------
+*.sqlite
+*.db
+*.bak
+
+# ------------------------------------
+# Logs
+# ------------------------------------
+logs/
+*.log
+
+# ------------------------------------
+# Node (if you ever use it for tooling)
+# ------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
