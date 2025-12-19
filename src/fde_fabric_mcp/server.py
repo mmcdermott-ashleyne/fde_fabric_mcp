@@ -421,6 +421,27 @@ async def preview_project_pipeline_payload(
         parameters_override=parameters_override,
     )
 
+
+@mcp.tool(
+    description=(
+        "Run the project orchestrator pipeline for all distinct UTC intervals on a given date. "
+        "Intervals are derived from active projects with dependency_rule NULL. "
+        "Orchestrator pipelineId comes from env_config['project_orchestrator_id']."
+    )
+)
+async def run_all_jobs_for_day(
+    ctx: Context,
+    run_date: str = Field(description="ISO date (YYYY-MM-DD) to run."),
+    dry_run: bool = Field(default=False, description="If true, build payloads but do not submit."),
+    is_current: int = Field(default=1, description="Pass-through parameter to orchestrator."),
+) -> Dict[str, Any]:
+    return await PL.run_project_orchestrator_for_day_impl(
+        ctx,
+        run_date,
+        dry_run=dry_run,
+        is_current=is_current,
+    )
+
 # -----------------------------------------------------------------------------
 # Entrypoint (stdio)
 # -----------------------------------------------------------------------------
