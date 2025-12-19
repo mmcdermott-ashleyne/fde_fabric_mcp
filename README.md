@@ -8,18 +8,18 @@ It handles:
 - Discovering Fabric workspaces and items
 - Resolving Lakehouse / Warehouse SQL endpoints
 - Running SQL queries against Fabric Warehouse/Lakehouse
-- Optional pipeline rerun helpers (when you plug in your existing runner)
+- Project-driven pipeline submission via `run_project_pipeline`
 
 ---
 
 ## Features
 
-- ✅ Health & identity tools (`ping`, `whoami`, `reset_context`)
-- 📂 Workspace discovery and selection
-- 🏞️ Lakehouse discovery and SQL endpoint resolution
-- 🏭 Warehouse resolution & SQL execution
-- 🧠 Per-client in-memory context store (workspace, lakehouse, warehouse)
-- 🧪 Optional Fabric pipeline rerun tools (commented out but ready to wire up)
+- Health & identity helpers (`ping`, `whoami`, `reset_context`)
+- Workspace discovery and selection tools
+- Lakehouse discovery plus SQL endpoint resolution
+- Warehouse selection combined with SQL execution helpers
+- Per-client in-memory context store for workspaces, lakehouses, warehouses, and projects
+- Project-driven Fabric pipeline submission (`run_project_pipeline`)
 
 ---
 
@@ -317,4 +317,3 @@ These helpers are designed for re-running Fabric pipelines over:
 ## License
 
 Add your license information here (e.g. MIT, proprietary, etc.).
-

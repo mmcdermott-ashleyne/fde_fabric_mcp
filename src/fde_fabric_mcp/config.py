@@ -36,5 +36,11 @@ class Settings:
         "{ODBC Driver 17 for SQL Server}",
     )
 
+    # Optional configuration database settings (used by pipeline helpers)
+    config_workspace: str = "fde_core_data_config"
+    config_warehouse: str = "core_dw_config"
+    config_database: str = "core_dw_config"
+    config_table: str = "dbo.environment_config"
+
 
 settings = Settings()

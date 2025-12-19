@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List
+import sys
 
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
@@ -9,6 +10,8 @@ from .core import context_store
 from .tools import lakehouse as LH
 from .tools import warehouse as WH
 from .tools import workspace as WS
+from .tools import pipelines as PL
+from .tools import projects as PR
 from .tools.identity import (
     get_username_short,
     get_username_email,
@@ -252,81 +255,171 @@ async def run_sql_query(
     """
     return await WH.run_sql_query_impl(ctx, sql)
 
-
 # -----------------------------------------------------------------------------
-# Pipeline Runner Tools (optional; uncomment when ready)
+# Project Tools
 # -----------------------------------------------------------------------------
-# @mcp.tool(
-#     description=(
-#         "Rerun a Fabric pipeline over an explicit date range using a project alias. "
-#         "Useful for backfilling data or performing dry-run validations."
-#     )
-# )
-# async def rerun_pipeline_by_alias(
-#     profile: str = Field(
-#         description="Configuration profile name (e.g. 'config' or environment-specific profile)."
-#     ),
-#     project_alias: str = Field(
-#         description="Logical alias for the pipeline/project to rerun."
-#     ),
-#     start_date: str = Field(
-#         description="Inclusive start date (YYYY-MM-DD) of the rerun interval."
-#     ),
-#     end_date: str = Field(
-#         description="Inclusive end date (YYYY-MM-DD) of the rerun interval."
-#     ),
-#     time_utc: str = Field(
-#         default="07:00",
-#         description="Time of day (HH:MM, UTC) to use for each rerun interval.",
-#     ),
-#     dry_run: bool = Field(
-#         default=True,
-#         description="If true, simulate pipeline reruns without actually executing them.",
-#     ),
-# ) -> List[Dict[str, Any]]:
-#     return PL.rerun_by_alias_impl(
-#         profile=profile,
-#         project_alias=project_alias,
-#         start_date=start_date,
-#         end_date=end_date,
-#         time_utc=time_utc,
-#         dry_run=dry_run,
-#     )
-#
-# @mcp.tool(
-#     description=(
-#         "Rerun a Fabric pipeline for the last N days using a project alias. "
-#         "Convenience wrapper over rerun_pipeline_by_alias with a relative date window."
-#     )
-# )
-# async def rerun_pipeline_last_days(
-#     profile: str = Field(
-#         description="Configuration profile name (e.g. 'config' or environment-specific profile)."
-#     ),
-#     project_alias: str = Field(
-#         description="Logical alias for the pipeline/project to rerun."
-#     ),
-#     days: int = Field(
-#         default=1,
-#         description="Number of days to rerun counting backwards from today (UTC).",
-#     ),
-#     time_utc: str = Field(
-#         default="07:00",
-#         description="Time of day (HH:MM, UTC) to use for each rerun interval.",
-#     ),
-#     dry_run: bool = Field(
-#         default=True,
-#         description="If true, simulate pipeline reruns without actually executing them.",
-#     ),
-# ) -> List[Dict[str, Any]]:
-#     return PL.rerun_last_days_impl(
-#         profile=profile,
-#         project_alias=project_alias,
-#         days=days,
-#         time_utc=time_utc,
-#         dry_run=dry_run,
-#     )
+@mcp.tool(
+    description=(
+        "List projects from dbo.project in the currently configured SQL endpoint "
+        "(warehouse or lakehouse). Optionally filter by project_alias substring."
+    )
+)
+async def list_projects(
+    ctx: Context,
+    search: str | None = Field(
+        default=None,
+        description=(
+            "Optional substring filter applied to project_alias "
+            "(uses SQL LIKE %search%)."
+        ),
+    ),
+    top: int = Field(
+        default=50,
+        description="Maximum number of projects to return (TOP N).",
+    ),
+) -> List[Dict[str, Any]]:
+    """
+    List projects visible in the current warehouse/lakehouse.
+    """
+    return await PR.list_projects_impl(ctx, search=search, top=top)
 
+
+@mcp.tool(
+    description=(
+        "Set the current project for this client by project_id or project_alias. "
+        "The project is loaded from dbo.project in the active SQL endpoint and "
+        "stored in per-client context."
+    )
+)
+async def set_project(
+    ctx: Context,
+    project_id: str | None = Field(
+        default=None,
+        description="Project ID to select (GUID/string/int). Use either this or project_alias.",
+    ),
+    project_alias: str | None = Field(
+        default=None,
+        description="Project alias to select. Use either this or project_id.",
+    ),
+) -> Dict[str, Any]:
+    """
+    Resolve and store the active project for this client.
+    """
+    return await PR.set_project_impl(ctx, project_id=project_id, project_alias=project_alias)
+
+
+@mcp.tool(
+    description=(
+        "Get the currently selected project for this client. "
+        "Requires set_project to have been called first."
+    )
+)
+async def get_current_project(
+    ctx: Context,
+) -> Dict[str, Any]:
+    """
+    Retrieve the active project for the current client.
+    """
+    return await PR.get_current_project_impl(ctx)
+
+# ---------------------------------------------------------------------------
+# Pipeline Tools
+# ---------------------------------------------------------------------------
+@mcp.tool(
+    description=(
+        "Submit a Fabric pipeline job for the currently selected project. "
+        "Use set_project() first so the project metadata is available."
+    )
+)
+async def run_project_pipeline(
+    ctx: Context,
+    start_date: str = Field(
+        description="ISO date (YYYY-MM-DD) for the first interval.",
+    ),
+    time_utc: str = Field(
+        default="cron",
+        description="UTC time (HH:MM) for each interval, or 'cron' to derive from project's cron_expression in America/New_York.",
+    ),
+    end_date: str | None = Field(
+        default=None,
+        description="Optional end date (YYYY-MM-DD). Defaults to start_date.",
+    ),
+    workspace_id: str | None = Field(
+        default=None,
+        description="Optional workspace ID. Falls back to the project's workspace_id or FABRIC_DEFAULT_WORKSPACE_ID.",
+    ),
+    pipeline_id: str | None = Field(
+        default=None,
+        description="Optional pipeline item GUID. Falls back to the project's parameters.",
+    ),
+    pipeline_name: str | None = Field(
+        default=None,
+        description="Optional pipeline name to include in executionData.pipelineName.",
+    ),
+    env: Dict[str, Any] | None = Field(
+        default=None,
+        description="Optional environment dictionary to merge with any env data stored on the project.",
+    ),
+    parameters_override: Dict[str, Any] | None = Field(
+        default=None,
+        description="Override for the project's parameters payload.",
+    ),
+    dry_run: bool = Field(
+        default=False,
+        description="If true, the payload is built but not submitted.",
+    ),
+) -> List[Dict[str, Any]]:
+    return await PL.run_project_pipeline_impl(
+        ctx,
+        start_date=start_date,
+        end_date=end_date,
+        time_utc=time_utc,
+        workspace_id=workspace_id,
+        pipeline_id=pipeline_id,
+        pipeline_name=pipeline_name,
+        env=env,
+        parameters_override=parameters_override,
+        dry_run=dry_run,
+    )
+
+
+@mcp.tool(
+    description=(
+        "Build the pipeline payload for the current project using the shared "
+        "environment_config row for the active stage (fde_core_data_{stage}). "
+        "Returns the payload(s) without submitting the run."
+    )
+)
+async def preview_project_pipeline_payload(
+    ctx: Context,
+    start_date: str = Field(
+        description="ISO date (YYYY-MM-DD) for the first interval.",
+    ),
+    time_utc: str = Field(
+        default="cron",
+        description="UTC time (HH:MM) for each interval, or 'cron' to derive from project's cron_expression in America/New_York.",
+    ),
+    end_date: str | None = Field(
+        default=None,
+        description="Optional end date (YYYY-MM-DD). Defaults to start_date.",
+    ),
+    env_override: Dict[str, Any] | None = Field(
+        default=None,
+        description="Additional environment values to merge on top of the config row.",
+    ),
+    parameters_override: Dict[str, Any] | None = Field(
+        default=None,
+        description="Override for the project's parameters payload.",
+    ),
+) -> List[Dict[str, Any]]:
+    return await PL.build_project_pipeline_payload_impl(
+        ctx,
+        start_date=start_date,
+        time_utc=time_utc,
+        end_date=end_date,
+        env_override=env_override,
+        parameters_override=parameters_override,
+    )
 
 # -----------------------------------------------------------------------------
 # Entrypoint (stdio)
@@ -336,7 +429,7 @@ def run() -> None:
     Start the FDE Fabric MCP server over stdio.
     This will block and serve tool requests until terminated.
     """
-    print("Starting FDE Fabric MCP server...", flush=True)
+    print("Starting FDE Fabric MCP server...", file=sys.stderr, flush=True)
     mcp.run()  # stdio transport by default
 
 
