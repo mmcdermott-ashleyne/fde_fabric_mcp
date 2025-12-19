@@ -34,8 +34,6 @@ fde_fabric_mcp/
 │   └── sql.py             # Fabric SQL/Warehouse connector via Azure AD token
 ├── core/
 │   ├── context_store.py   # Per-MCP-client in-memory context
-│   ├── pipeline_runner.py # (stub / wrapper for your pipeline runner impl)
-│   ├── projects.py        # Reserved for future project helpers
 │   └── sql_endpoints.py   # Resolve Lakehouse/Warehouse SQL endpoints via REST
 ├── tools/
 │   ├── identity.py        # Azure CLI-based identity helpers (`whoami`)
