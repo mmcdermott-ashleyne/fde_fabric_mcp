@@ -6,7 +6,7 @@ from typing import Any, Dict
 from mcp.server.fastmcp import Context
 
 from ..clients.sql import get_sql_connection
-from ..core import context_store
+from ..core import context_store, guardrails
 from ..core.sql_endpoints import get_warehouse_sql_endpoint
 
 WAREHOUSE_NAMESPACE = "warehouse"
@@ -92,6 +92,8 @@ async def run_sql_query_impl(ctx: Context, sql: str) -> Dict[str, Any]:
       - Otherwise uses Lakehouse if configured
     """
     target = _resolve_sql_target(ctx)
+    if guardrails.is_read_only_target(target):
+        guardrails.validate_read_only_sql(sql)
     server = target["server"]
     database = target["database"]
 

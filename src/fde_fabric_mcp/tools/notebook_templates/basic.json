@@ -1,0 +1,23 @@
+{
+  "description": "Starter notebook with a short intro and hello-world cell.",
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Starter Notebook\n",
+        "\n",
+        "This notebook is a lightweight starting point for Fabric work.\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "print(\"Hello from Fabric!\")\n"
+      ]
+    }
+  ]
+}

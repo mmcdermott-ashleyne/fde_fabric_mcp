@@ -12,6 +12,7 @@ from .tools import warehouse as WH
 from .tools import workspace as WS
 from .tools import pipelines as PL
 from .tools import projects as PR
+from .tools import notebooks as NB
 from .tools.identity import (
     get_username_short,
     get_username_email,
@@ -254,6 +255,174 @@ async def run_sql_query(
     Run a SQL query against the active warehouse for this client.
     """
     return await WH.run_sql_query_impl(ctx, sql)
+
+# -----------------------------------------------------------------------------
+# Notebook Tools
+# -----------------------------------------------------------------------------
+@mcp.tool(
+    description=(
+        "List notebooks in a Fabric workspace (by name or ID). "
+        "Returns notebook item IDs and names."
+    )
+)
+async def list_notebooks(
+    ctx: Context,
+    workspace: str | None = Field(
+        default=None,
+        description=(
+            "Workspace name or GUID where the notebooks live. "
+            "If omitted, uses the active workspace."
+        ),
+    ),
+) -> List[Dict[str, Any]]:
+    return await NB.list_notebooks_impl(ctx, workspace)
+
+
+@mcp.tool(
+    description=(
+        "Get a notebook item by ID in a specific Fabric workspace."
+    )
+)
+async def get_notebook(
+    ctx: Context,
+    workspace: str | None = Field(
+        default=None,
+        description=(
+            "Workspace name or GUID where the notebook lives. "
+            "If omitted, uses the active workspace."
+        ),
+    ),
+    notebook_id: str = Field(
+        description="Notebook item ID (GUID).",
+    ),
+) -> Dict[str, Any]:
+    return await NB.get_notebook_impl(ctx, workspace, notebook_id)
+
+
+@mcp.tool(
+    description=(
+        "Create a new notebook in a Fabric workspace. The content should be a "
+        "base64-encoded .ipynb payload."
+    )
+)
+async def create_notebook(
+    ctx: Context,
+    workspace: str | None = Field(
+        default=None,
+        description=(
+            "Workspace name or GUID where the notebook should be created. "
+            "If omitted, uses the active workspace."
+        ),
+    ),
+    notebook_name: str = Field(
+        description="Display name for the notebook.",
+    ),
+    content: str = Field(
+        description="Base64-encoded .ipynb content.",
+    ),
+    folder_path: str | None = Field(
+        default=None,
+        description=(
+            "Optional folder path inside the workspace (for example: "
+            "'Shared/Team Notebooks/DataOps')."
+        ),
+    ),
+    folder_id: str | None = Field(
+        default=None,
+        description=(
+            "Optional folder item ID to use as the parent. "
+            "If provided, it takes precedence over folder_path."
+        ),
+    ),
+    create_missing_folders: bool = Field(
+        default=False,
+        description=(
+            "If true, create missing folders along folder_path before creating "
+            "the notebook."
+        ),
+    ),
+    ipynb_name: str | None = Field(
+        default=None,
+        description="Optional .ipynb filename (defaults to notebook_name).",
+    ),
+) -> Dict[str, Any]:
+    return await NB.create_notebook_impl(
+        ctx,
+        workspace=workspace,
+        notebook_name=notebook_name,
+        content=content,
+        ipynb_name=ipynb_name,
+        folder_path=folder_path,
+        folder_id=folder_id,
+        create_missing_folders=create_missing_folders,
+    )
+
+
+@mcp.tool(
+    description="List available notebook templates for create_template_notebook."
+)
+async def list_notebook_templates(
+    ctx: Context,
+) -> List[Dict[str, Any]]:
+    return await NB.list_notebook_templates_impl()
+
+
+@mcp.tool(
+    description=(
+        "Create a new notebook from a built-in template in a Fabric workspace."
+    )
+)
+async def create_template_notebook(
+    ctx: Context,
+    workspace: str | None = Field(
+        default=None,
+        description=(
+            "Workspace name or GUID where the notebook should be created. "
+            "If omitted, uses the active workspace."
+        ),
+    ),
+    notebook_name: str = Field(
+        description="Display name for the notebook.",
+    ),
+    template_name: str = Field(
+        description="Template name to use (see list_notebook_templates).",
+    ),
+    folder_path: str | None = Field(
+        default=None,
+        description=(
+            "Optional folder path inside the workspace (for example: "
+            "'Shared/Team Notebooks/DataOps')."
+        ),
+    ),
+    folder_id: str | None = Field(
+        default=None,
+        description=(
+            "Optional folder item ID to use as the parent. "
+            "If provided, it takes precedence over folder_path."
+        ),
+    ),
+    create_missing_folders: bool = Field(
+        default=False,
+        description=(
+            "If true, create missing folders along folder_path before creating "
+            "the notebook."
+        ),
+    ),
+    ipynb_name: str | None = Field(
+        default=None,
+        description="Optional .ipynb filename (defaults to notebook_name).",
+    ),
+) -> Dict[str, Any]:
+    return await NB.create_template_notebook_impl(
+        ctx,
+        workspace=workspace,
+        notebook_name=notebook_name,
+        template_name=template_name,
+        ipynb_name=ipynb_name,
+        folder_path=folder_path,
+        folder_id=folder_id,
+        create_missing_folders=create_missing_folders,
+    )
 
 # -----------------------------------------------------------------------------
 # Project Tools

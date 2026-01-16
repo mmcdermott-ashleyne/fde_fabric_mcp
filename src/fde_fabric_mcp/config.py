@@ -4,6 +4,19 @@ import os
 from dataclasses import dataclass
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _env_csv(name: str, default: str) -> tuple[str, ...]:
+    raw = os.getenv(name, default)
+    items = [item.strip() for item in raw.split(",") if item.strip()]
+    return tuple(items)
+
+
 @dataclass(frozen=True)
 class Settings:
     """
@@ -41,6 +54,17 @@ class Settings:
     config_warehouse: str = "core_dw_config"
     config_database: str = "core_dw_config"
     config_table: str = "dbo.environment_config"
+
+    # Optional SQL guardrails for MCP callers
+    read_only_sql_enabled: bool = _env_bool("FABRIC_READ_ONLY_SQL_ENABLED", True)
+    read_only_workspace_names: tuple[str, ...] = _env_csv(
+        "FABRIC_READ_ONLY_WORKSPACE_NAMES",
+        "fde_core_data_prod,fde_core_data_stg,fde_core_data_dev",
+    )
+    read_only_workspace_ids: tuple[str, ...] = _env_csv(
+        "FABRIC_READ_ONLY_WORKSPACE_IDS",
+        "",
+    )
 
 
 settings = Settings()
