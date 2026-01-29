@@ -148,8 +148,11 @@ def _parameters_lookup(value: Any) -> Dict[str, Any]:
     return _dict_from_json(value) or {}
 
 
-def _fabric_monitor_url(workspace_id: str, instance_id: str) -> str:
-    return f"{_FABRIC_MONITOR_BASE}/workspaces/{workspace_id}/pipelines/{instance_id}"
+def _fabric_monitor_url(workspace_id: str, pipeline_id: str, instance_id: str) -> str:
+    return (
+        f"{_FABRIC_MONITOR_BASE}/workspaces/{workspace_id}/pipelines/{pipeline_id}/"
+        f"{instance_id}?experience=power-bi"
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -495,7 +498,11 @@ async def run_project_pipeline_impl(
             entry.update(resp)
             instance_id = entry.get("instance_id")
             if instance_id:
-                entry["monitor_url"] = _fabric_monitor_url(str(resolved_workspace_id), str(instance_id))
+                entry["monitor_url"] = _fabric_monitor_url(
+                    str(resolved_workspace_id),
+                    str(resolved_pipeline_id),
+                    str(instance_id),
+                )
 
         results.append(entry)
         current += timedelta(days=1)
@@ -736,7 +743,11 @@ async def run_project_orchestrator_for_day_impl(
             entry.update(resp)
             instance_id = entry.get("instance_id")
             if instance_id:
-                entry["monitor_url"] = _fabric_monitor_url(orchestrator_workspace_id, str(instance_id))
+                entry["monitor_url"] = _fabric_monitor_url(
+                    orchestrator_workspace_id,
+                    orchestrator_pipeline_id,
+                    str(instance_id),
+                )
 
         results.append(entry)
 
