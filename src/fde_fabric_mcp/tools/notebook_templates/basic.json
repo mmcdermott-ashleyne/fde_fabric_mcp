@@ -1,13 +1,30 @@
 {
-  "description": "Starter notebook with a short intro and hello-world cell.",
+  "description": "Starter Fabric notebook template with orchestration inputs, section layout, and finalize/exit payloads.",
   "cells": [
     {
       "cell_type": "markdown",
       "metadata": {},
       "source": [
-        "# Starter Notebook\n",
+        "# Starter Orchestration Notebook\n",
         "\n",
-        "This notebook is a lightweight starting point for Fabric work.\n"
+        "This notebook is a **minimal, reusable Fabric template** that:\n",
+        "\n",
+        "- Accepts **orchestration parameters** from a pipeline\n",
+        "- Provides **clear section headings** for consistency\n",
+        "- Returns a **standardized exit payload** for orchestrators\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## 1) Parameters & toggles\n",
+        "\n",
+        "Fabric pipelines typically inject these parameters at runtime:\n",
+        "\n",
+        "- `input_stage`: environment (dev/test/prod)\n",
+        "- `run_interval_utc`: orchestrator run timestamp\n",
+        "- `input_data_interval_utc`: data timestamp used to derive the daily slice\n"
       ]
     },
     {
@@ -16,7 +33,142 @@
       "metadata": {},
       "outputs": [],
       "source": [
-        "print(\"Hello from Fabric!\")\n"
+        "from datetime import datetime\n",
+        "from notebookutils import runtime\n",
+        "\n",
+        "# --------- Runtime parameters (Fabric will inject these) ----------\n",
+        "run_interval_utc        = globals().get(\"run_interval_utc\", \"2000-01-01 00:00:00\")\n",
+        "input_data_interval_utc = globals().get(\"input_data_interval_utc\", \"2000-01-01 00:00:00\")\n",
+        "input_stage             = globals().get(\"input_stage\", \"dev\")\n",
+        "\n",
+        "# --------- Optional toggles ----------\n",
+        "DRY_RUN = True\n",
+        "\n",
+        "# Basic run metadata\n",
+        "RUN_START_UTC = datetime.utcnow()\n",
+        "NOTEBOOK_ID = runtime.context.get(\"currentNotebookId\")\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## 2) Unified helper functions\n",
+        "\n",
+        "Keep helpers small and generic so the template stays reusable.\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "def as_int(value, default=0) -> int:\n",
+        "    try:\n",
+        "        return int(value)\n",
+        "    except Exception:\n",
+        "        return default\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## 3) Main logic (customization point)\n",
+        "\n",
+        "Replace this placeholder with your project-specific work.\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "def run_core_logic() -> int:\n",
+        "    \"\"\"\n",
+        "    Main workload entrypoint.\n",
+        "    Return the number of rows processed (or 0 if none).\n",
+        "    \"\"\"\n",
+        "    if DRY_RUN:\n",
+        "        print(\"[DRY_RUN] No work executed.\")\n",
+        "        return 0\n",
+        "\n",
+        "    # TODO: Add your business logic here.\n",
+        "    return 0\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## 4) Execution logic & orchestration\n",
+        "\n",
+        "This section runs the core logic and prepares data for the final payload.\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "# Placeholder for any orchestration logic that wraps run_core_logic().\n",
+        "# Keep this lightweight; the template should remain reusable.\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## 5) Finalize and exit payloads\n",
+        "\n",
+        "This cell returns a JSON payload that pipeline orchestrators can parse.\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "import json\n",
+        "import traceback\n",
+        "\n",
+        "try:\n",
+        "    rows_processed = run_core_logic()\n",
+        "    run_end_utc = datetime.utcnow()\n",
+        "    result = {\n",
+        "        \"status\": \"SUCCEEDED\",\n",
+        "        \"input_stage\": input_stage,\n",
+        "        \"run_interval_utc\": run_interval_utc,\n",
+        "        \"input_data_interval_utc\": input_data_interval_utc,\n",
+        "        \"run_start_utc\": RUN_START_UTC.strftime(\"%Y-%m-%d %H:%M:%S\"),\n",
+        "        \"run_end_utc\": run_end_utc.strftime(\"%Y-%m-%d %H:%M:%S\"),\n",
+        "        \"duration_seconds\": (run_end_utc - RUN_START_UTC).total_seconds(),\n",
+        "        \"rows_processed\": as_int(rows_processed),\n",
+        "        \"notebook_id\": NOTEBOOK_ID,\n",
+        "        \"error_message\": \"\",\n",
+        "        \"error_trace\": \"\",\n",
+        "    }\n",
+        "except Exception as exc:\n",
+        "    run_end_utc = datetime.utcnow()\n",
+        "    result = {\n",
+        "        \"status\": \"FAILED\",\n",
+        "        \"input_stage\": input_stage,\n",
+        "        \"run_interval_utc\": run_interval_utc,\n",
+        "        \"input_data_interval_utc\": input_data_interval_utc,\n",
+        "        \"run_start_utc\": RUN_START_UTC.strftime(\"%Y-%m-%d %H:%M:%S\"),\n",
+        "        \"run_end_utc\": run_end_utc.strftime(\"%Y-%m-%d %H:%M:%S\"),\n",
+        "        \"duration_seconds\": (run_end_utc - RUN_START_UTC).total_seconds(),\n",
+        "        \"rows_processed\": 0,\n",
+        "        \"notebook_id\": NOTEBOOK_ID,\n",
+        "        \"error_message\": str(exc),\n",
+        "        \"error_trace\": traceback.format_exc(),\n",
+        "    }\n",
+        "\n",
+        "notebookutils.notebook.exit(json.dumps(result))\n"
       ]
     }
   ]
