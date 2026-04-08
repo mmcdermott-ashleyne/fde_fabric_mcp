@@ -304,6 +304,7 @@ Available templates:
 
 * `basic`
 * `python_file_to_delta_template`
+* `python_delta_or_sql_to_delta_template`
 
 
 ---
